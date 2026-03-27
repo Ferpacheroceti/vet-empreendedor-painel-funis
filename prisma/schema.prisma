@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Funil {
+  id            String    @id @default(cuid())
+  nome          String
+  canal         String
+  status        String    // "ativo" | "em_teste" | "pausado"
+  investMeta    Float     @default(0)
+  criadoEm      DateTime  @default(now())
+  produtos      Produto[]
+  campanhaLinks CampanhaFunilLink[]
+  historico     HistoricoItem[]
+  gastoManual   GastoManual[]
+}
+
+model Produto {
+  id             String  @id @default(cuid())
+  funilId        String
+  funil          Funil   @relation(fields: [funilId], references: [id], onDelete: Cascade)
+  nome           String
+  codigoHotmart  String
+  preco          Float
+  tipo           String  // "entrada" | "order-bump" | "upsell" | "webinar" | "downsell"
+  metaMensal     Int     @default(0)
+  ordem          Int
+}
+
+model CampanhaFunilLink {
+  id           String @id @default(cuid())
+  funilId      String
+  funil        Funil  @relation(fields: [funilId], references: [id], onDelete: Cascade)
+  campanhaId   String
+  campanhaNome String
+  conjuntoId   String?
+  conjuntoNome String?
+}
+
+model HistoricoItem {
+  id       String   @id @default(cuid())
+  funilId  String
+  funil    Funil    @relation(fields: [funilId], references: [id], onDelete: Cascade)
+  tipo     String   // "alteracao" | "teste" | "resultado"
+  data     DateTime
+  texto    String
+  isAtual  Boolean  @default(false)
+}
+
+model GastoManual {
+  id      String @id @default(cuid())
+  funilId String
+  funil   Funil  @relation(fields: [funilId], references: [id], onDelete: Cascade)
+  mes     String // formato: "YYYY-MM"
+  valor   Float
+}

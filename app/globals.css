@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0a0a0f;
+    --foreground: rgba(255, 255, 255, 0.87);
+    --font-syne: 'Syne', system-ui, sans-serif;
+    --font-dm-mono: 'DM Mono', 'Courier New', monospace;
+    --font-dm-sans: 'DM Sans', system-ui, sans-serif;
+  }
+
+  * {
+    border-color: rgba(255, 255, 255, 0.07);
+  }
+
+  body {
+    background-color: #0a0a0f;
+    color: rgba(255, 255, 255, 0.87);
+    font-family: var(--font-dm-sans);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-syne);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .font-syne {
+    font-family: var(--font-syne) !important;
+  }
+
+  .font-dm-mono {
+    font-family: var(--font-dm-mono) !important;
+  }
+
+  .font-dm-sans {
+    font-family: var(--font-dm-sans) !important;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+  }
+}
