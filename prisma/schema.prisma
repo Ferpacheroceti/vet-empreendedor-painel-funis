@@ -20,6 +20,7 @@ model Funil {
   campanhaLinks CampanhaFunilLink[]
   historico     HistoricoItem[]
   gastoManual   GastoManual[]
+  tarefas       Tarefa[]
 }
 
 model Produto {
@@ -60,4 +61,34 @@ model GastoManual {
   funil   Funil  @relation(fields: [funilId], references: [id], onDelete: Cascade)
   mes     String // formato: "YYYY-MM"
   valor   Float
+}
+
+model AnaliseDiaria {
+  id            String   @id @default(cuid())
+  data          DateTime
+  investimento  Float
+  faturamento   Float
+  roas          Float
+  resumo        String
+  criativos     String   // JSON com análise por criativo
+  campanhas     String   // JSON com análise por campanha
+  oQueFunciona  String
+  oQueMelhorar  String
+  recomendacoes String   // JSON com lista de ações
+  criadoEm      DateTime @default(now())
+}
+
+model Tarefa {
+  id           String    @id @default(cuid())
+  descricao    String
+  tipo         String    // "criativo" | "vsl" | "post" | "story" | "copy" | "outro"
+  prazo        DateTime
+  linkArquivo  String?
+  status       String    @default("pendente") // "pendente" | "feito"
+  funilId      String?
+  funil        Funil?    @relation(fields: [funilId], references: [id])
+  prioridade   String    @default("normal") // "urgente" | "normal" | "pode_esperar"
+  criadoEm     DateTime  @default(now())
+  concluidoEm  DateTime?
+  impactoFunil String?
 }
