@@ -22,6 +22,7 @@ import { GastoManualPanel } from "@/components/dashboard/gasto-manual-panel";
 import { VincularCampanhasModal } from "@/components/dashboard/vincular-campanhas-modal";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/utils";
 import { calcularMetricas, calcularSaude } from "@/lib/metrics";
+import { ptBR } from "date-fns/locale";
 
 interface Produto {
   id: string;
@@ -97,6 +98,127 @@ const tipoLabels: Record<string, string> = {
   webinar: "Webinar",
   downsell: "Downsell",
 };
+
+// ---------- Historico Timeline ----------
+
+type HistoricoFilterType = "todos" | "alteracao" | "teste" | "resultado";
+
+const timelineDotColor: Record<string, string> = {
+  resultado: "bg-green-500",
+  teste: "bg-yellow-400",
+  alteracao: "bg-purple-500",
+};
+
+const timelineBadgeColor: Record<string, string> = {
+  resultado: "bg-green-500/15 text-green-400 border border-green-500/25",
+  teste: "bg-yellow-400/15 text-yellow-300 border border-yellow-400/25",
+  alteracao: "bg-purple-500/15 text-purple-400 border border-purple-500/25",
+};
+
+const timelineBorderColor: Record<string, string> = {
+  resultado: "border-green-500/30",
+  teste: "border-yellow-400/30",
+  alteracao: "border-purple-500/30",
+};
+
+const tipoLabel: Record<string, string> = {
+  resultado: "Resultado",
+  teste: "Teste",
+  alteracao: "Alteração",
+};
+
+function HistoricoTimeline({ historico }: { historico: HistoricoItem[] }) {
+  const [filter, setFilter] = useState<HistoricoFilterType>("todos");
+
+  const sorted = [...historico].sort((a, b) => {
+    return new Date(b.data).getTime() - new Date(a.data).getTime();
+  });
+
+  const filtered = sorted.filter((item) => {
+    if (filter === "todos") return true;
+    if (filter === "alteracao") return item.tipo === "alteracao";
+    if (filter === "teste") return item.tipo === "teste";
+    if (filter === "resultado") return item.tipo === "resultado";
+    return true;
+  });
+
+  const filterButtons: { key: HistoricoFilterType; label: string }[] = [
+    { key: "todos", label: "Todos" },
+    { key: "alteracao", label: "Alterações" },
+    { key: "teste", label: "Testes" },
+    { key: "resultado", label: "Resultados" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Filter buttons */}
+      <div className="flex flex-wrap gap-2">
+        {filterButtons.map((btn) => (
+          <button
+            key={btn.key}
+            onClick={() => setFilter(btn.key)}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              filter === btn.key
+                ? "bg-[#5003ef]/25 text-[#a78bfa] border border-[#5003ef]/40"
+                : "bg-white/5 text-white/40 border border-white/10 hover:text-white/70 hover:bg-white/8"
+            }`}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Timeline */}
+      {filtered.length === 0 ? (
+        <div className="text-center text-white/30 text-sm py-8">
+          Nenhum registro no histórico
+        </div>
+      ) : (
+        <div className="relative max-h-[400px] overflow-y-auto pr-1">
+          {/* Vertical line */}
+          <div className="absolute left-[7px] top-0 bottom-0 w-px bg-white/10" />
+          <div className="space-y-5 pl-7">
+            {filtered.map((item) => {
+              const dot = timelineDotColor[item.tipo] ?? "bg-white/30";
+              const badge = timelineBadgeColor[item.tipo] ?? "bg-white/10 text-white/50";
+              const borderAcc = timelineBorderColor[item.tipo] ?? "border-white/10";
+              let formattedDate = item.data;
+              try {
+                formattedDate = format(parseISO(item.data), "dd/MM/yyyy", { locale: ptBR });
+              } catch {
+                // keep original if parse fails
+              }
+
+              return (
+                <div key={item.id} className="relative">
+                  {/* Dot */}
+                  <div
+                    className={`absolute -left-[26px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-[#0a0a0f] ${dot}`}
+                  />
+                  {/* Card */}
+                  <div className={`bg-[#0a0a0f] border rounded-xl px-4 py-3 space-y-1.5 ${borderAcc}`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-white/35 text-xs font-mono">{formattedDate}</span>
+                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${badge}`}>
+                        {tipoLabel[item.tipo] ?? item.tipo}
+                      </span>
+                      {item.isAtual && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                          ATUAL
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-white/75 text-sm leading-snug">{item.texto}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function FunilDetailPage() {
   const { status } = useSession();
@@ -666,6 +788,16 @@ export default function FunilDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Timeline de histórico */}
+        {funil.historico.length > 0 && (
+          <div className="bg-[#12121a] border border-white/7 rounded-xl p-6">
+            <h2 className="font-syne text-lg font-semibold text-white mb-5">
+              Linha do Tempo
+            </h2>
+            <HistoricoTimeline historico={funil.historico} />
+          </div>
+        )}
 
         {/* Painéis inferiores */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
