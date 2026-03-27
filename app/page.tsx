@@ -2,13 +2,47 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { subDays, startOfDay, endOfDay } from "date-fns";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FunilCard } from "@/components/dashboard/funil-card";
 import { PeriodFilter } from "@/components/dashboard/period-filter";
-import { Plus, Activity, LayoutGrid } from "lucide-react";
+import { Plus, Activity, LayoutGrid, CheckSquare, TrendingUp } from "lucide-react";
+
+// ---------- Top Nav ----------
+
+function TopNav() {
+  const pathname = usePathname();
+  const navItems = [
+    { href: "/", label: "Dashboard", icon: <LayoutGrid className="h-4 w-4" /> },
+    { href: "/tarefas", label: "Tarefas", icon: <CheckSquare className="h-4 w-4" /> },
+    { href: "/impacto", label: "Impacto", icon: <TrendingUp className="h-4 w-4" /> },
+  ];
+  return (
+    <nav className="w-full bg-[#0d0d15] border-b border-white/[0.07]">
+      <div className="max-w-screen-2xl mx-auto px-4 md:px-8 flex flex-wrap items-center gap-1 h-12">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-[#5003ef]/20 text-[#a78bfa]"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
 
 // ---------- Types ----------
 
@@ -182,15 +216,18 @@ function DashboardContent() {
   // Loading state while session resolves
   if (status === "loading" || (status === "authenticated" && loadingFunis)) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] px-4 py-6 md:px-8">
-        <div className="max-w-screen-2xl mx-auto space-y-6">
-          {/* Header skeleton */}
-          <div className="flex items-center justify-between">
-            <div className="h-8 w-48 rounded-lg bg-white/5 animate-pulse" />
-            <div className="h-9 w-32 rounded-lg bg-white/5 animate-pulse" />
+      <div className="min-h-screen bg-[#0a0a0f]">
+        <TopNav />
+        <div className="px-4 py-6 md:px-8">
+          <div className="max-w-screen-2xl mx-auto space-y-6">
+            {/* Header skeleton */}
+            <div className="flex items-center justify-between">
+              <div className="h-8 w-48 rounded-lg bg-white/5 animate-pulse" />
+              <div className="h-9 w-32 rounded-lg bg-white/5 animate-pulse" />
+            </div>
+            <div className="h-9 w-full max-w-2xl rounded-lg bg-white/5 animate-pulse" />
+            <LoadingGrid />
           </div>
-          <div className="h-9 w-full max-w-2xl rounded-lg bg-white/5 animate-pulse" />
-          <LoadingGrid />
         </div>
       </div>
     );
@@ -201,102 +238,172 @@ function DashboardContent() {
   const ativosCount = funis.filter((f) => f.status === "ativo").length;
   const emTesteCount = funis.filter((f) => f.status === "em_teste").length;
 
+  const funisEmTeste = funis.filter((f) => f.status === "em_teste");
+  const funisAtivos = funis.filter((f) => f.status === "ativo");
+  const funisPausados = funis.filter(
+    (f) => f.status !== "ativo" && f.status !== "em_teste"
+  );
+
+  function FunilSection({
+    title,
+    sectionFunis,
+    accentClass,
+    headerClass,
+    dimmed = false,
+  }: {
+    title: string;
+    sectionFunis: Funil[];
+    accentClass: string;
+    headerClass: string;
+    dimmed?: boolean;
+  }) {
+    if (sectionFunis.length === 0) return null;
+    return (
+      <div className={`space-y-3 border-l-2 pl-4 ${accentClass}`}>
+        <div className={`text-xs font-semibold uppercase tracking-widest ${headerClass}`}>
+          {title} <span className="opacity-60">({sectionFunis.length})</span>
+        </div>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 ${dimmed ? "opacity-60" : ""}`}>
+          {sectionFunis.map((funil) => {
+            const m = metrics[funil.id];
+            return (
+              <FunilCard
+                key={funil.id}
+                funil={funil}
+                faturamento={m?.faturamento ?? 0}
+                roas={m?.roas ?? 0}
+                saudeScore={m?.saudeScore ?? 0}
+              />
+            );
+          })}
+          {loadingMetrics &&
+            sectionFunis
+              .filter((f) => !metrics[f.id])
+              .map((f) => <CardSkeleton key={`sk-${f.id}`} />)}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#0a0a0f] px-4 py-6 md:px-8">
-      <div className="max-w-screen-2xl mx-auto space-y-6">
-        {/* ---- Header ---- */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5 text-[#5003ef]" />
-              <h1 className="text-2xl font-bold text-white font-[family-name:var(--font-syne)]">
-                Painel de Funis
-              </h1>
-            </div>
-            <p className="text-white/40 text-sm">
-              {funis.length} funil{funis.length !== 1 ? "s" : ""}
-              {ativosCount > 0 && (
-                <span className="ml-2 text-green-400">
-                  · {ativosCount} ativo{ativosCount !== 1 ? "s" : ""}
-                </span>
-              )}
-              {emTesteCount > 0 && (
-                <span className="ml-2 text-yellow-400">
-                  · {emTesteCount} em teste
-                </span>
-              )}
-            </p>
-          </div>
-
-          <Link href="/funil/novo">
-            <Button
-              size="sm"
-              className="bg-[#5003ef] hover:bg-[#6617f5] text-white border-0 gap-1.5 h-9 px-4 font-medium"
-            >
-              <Plus className="h-4 w-4" />
-              Novo Funil
-            </Button>
-          </Link>
-        </div>
-
-        {/* ---- Period Filter ---- */}
-        <div className="bg-[#12121a] border border-white/[0.07] rounded-xl px-4 py-3">
-          <PeriodFilter />
-        </div>
-
-        {/* ---- Error state ---- */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* ---- Funis grid ---- */}
-        {!error && funis.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#12121a] border border-white/[0.07] flex items-center justify-center">
-              <Activity className="h-7 w-7 text-white/20" />
-            </div>
+    <div className="min-h-screen bg-[#0a0a0f]">
+      <TopNav />
+      <div className="px-4 py-6 md:px-8">
+        <div className="max-w-screen-2xl mx-auto space-y-6">
+          {/* ---- Header ---- */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-white/60 text-base font-medium font-[family-name:var(--font-syne)]">
-                Nenhum funil criado ainda
-              </p>
-              <p className="text-white/30 text-sm">
-                Crie seu primeiro funil para começar a monitorar seus
-                resultados.
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-[#5003ef]" />
+                <h1 className="text-2xl font-bold text-white font-[family-name:var(--font-syne)]">
+                  Painel de Funis
+                </h1>
+              </div>
+              <p className="text-white/40 text-sm">
+                {funis.length} funil{funis.length !== 1 ? "s" : ""}
+                {ativosCount > 0 && (
+                  <span className="ml-2 text-green-400">
+                    · {ativosCount} ativo{ativosCount !== 1 ? "s" : ""}
+                  </span>
+                )}
+                {emTesteCount > 0 && (
+                  <span className="ml-2 text-yellow-400">
+                    · {emTesteCount} em teste
+                  </span>
+                )}
               </p>
             </div>
+
             <Link href="/funil/novo">
               <Button
                 size="sm"
-                className="bg-[#5003ef] hover:bg-[#6617f5] text-white border-0 gap-1.5"
+                className="bg-[#5003ef] hover:bg-[#6617f5] text-white border-0 gap-1.5 h-9 px-4 font-medium"
               >
                 <Plus className="h-4 w-4" />
-                Criar primeiro funil
+                Novo Funil
               </Button>
             </Link>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {funis.map((funil) => {
-              const m = metrics[funil.id];
-              return (
-                <FunilCard
-                  key={funil.id}
-                  funil={funil}
-                  faturamento={m?.faturamento ?? 0}
-                  roas={m?.roas ?? 0}
-                  saudeScore={m?.saudeScore ?? 0}
-                />
-              );
-            })}
-            {/* Show skeletons for cards still loading */}
-            {loadingMetrics &&
-              funis
-                .filter((f) => !metrics[f.id])
-                .map((f) => <CardSkeleton key={`sk-${f.id}`} />)}
+
+          {/* ---- Period Filter ---- */}
+          <div className="bg-[#12121a] border border-white/[0.07] rounded-xl px-4 py-3">
+            <PeriodFilter />
           </div>
-        )}
+
+          {/* ---- Active test banners ---- */}
+          {funisEmTeste.length > 0 && (
+            <div className="space-y-2">
+              {funisEmTeste.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/25 rounded-xl px-4 py-3"
+                >
+                  <span className="text-lg leading-none">🧪</span>
+                  <p className="text-yellow-300 text-sm">
+                    <span className="font-semibold">Teste em andamento:</span>{" "}
+                    {f.nome}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ---- Error state ---- */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* ---- Funis sections ---- */}
+          {!error && funis.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-[#12121a] border border-white/[0.07] flex items-center justify-center">
+                <Activity className="h-7 w-7 text-white/20" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-white/60 text-base font-medium font-[family-name:var(--font-syne)]">
+                  Nenhum funil criado ainda
+                </p>
+                <p className="text-white/30 text-sm">
+                  Crie seu primeiro funil para começar a monitorar seus
+                  resultados.
+                </p>
+              </div>
+              <Link href="/funil/novo">
+                <Button
+                  size="sm"
+                  className="bg-[#5003ef] hover:bg-[#6617f5] text-white border-0 gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  Criar primeiro funil
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <FunilSection
+                title="Em Teste"
+                sectionFunis={funisEmTeste}
+                accentClass="border-yellow-500/50"
+                headerClass="text-yellow-400"
+              />
+              <FunilSection
+                title="Ativos"
+                sectionFunis={funisAtivos}
+                accentClass="border-green-500/50"
+                headerClass="text-green-400"
+              />
+              <FunilSection
+                title="Pausados / Inativos"
+                sectionFunis={funisPausados}
+                accentClass="border-white/10"
+                headerClass="text-white/30"
+                dimmed
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -308,20 +415,23 @@ export default function HomePage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0a0a0f] px-4 py-6 md:px-8">
-          <div className="max-w-screen-2xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="h-8 w-48 rounded-lg bg-white/5 animate-pulse" />
-              <div className="h-9 w-32 rounded-lg bg-white/5 animate-pulse" />
-            </div>
-            <div className="h-9 w-full max-w-2xl rounded-lg bg-white/5 animate-pulse" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-[#12121a] border border-white/[0.07] rounded-xl p-5 animate-pulse min-h-[240px]"
-                />
-              ))}
+        <div className="min-h-screen bg-[#0a0a0f]">
+          <div className="w-full bg-[#0d0d15] border-b border-white/[0.07] h-12" />
+          <div className="px-4 py-6 md:px-8">
+            <div className="max-w-screen-2xl mx-auto space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="h-8 w-48 rounded-lg bg-white/5 animate-pulse" />
+                <div className="h-9 w-32 rounded-lg bg-white/5 animate-pulse" />
+              </div>
+              <div className="h-9 w-full max-w-2xl rounded-lg bg-white/5 animate-pulse" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-[#12121a] border border-white/[0.07] rounded-xl p-5 animate-pulse min-h-[240px]"
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
