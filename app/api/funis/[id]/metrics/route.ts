@@ -5,7 +5,33 @@ import { prisma } from "@/lib/prisma";
 import { getVendas } from "@/lib/google-sheets";
 import { calcularMetricas, calcularSaude } from "@/lib/metrics";
 import { parseISO, format } from "date-fns";
-import type { Produto, GastoManual, HistoricoItem } from "@prisma/client";
+
+type ProdutoRow = {
+  id: string;
+  funilId: string;
+  nome: string;
+  codigoHotmart: string;
+  preco: number;
+  tipo: string;
+  metaMensal: number;
+  ordem: number;
+};
+
+type GastoManualRow = {
+  id: string;
+  funilId: string;
+  mes: string;
+  valor: number;
+};
+
+type HistoricoRow = {
+  id: string;
+  funilId: string;
+  tipo: string;
+  data: Date;
+  texto: string;
+  isAtual: boolean;
+};
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -26,19 +52,24 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   });
 
   if (!funil) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!funil.produtos.length) {
+
+  const produtos = funil.produtos as ProdutoRow[];
+  const gastoManual = funil.gastoManual as GastoManualRow[];
+  const historico = funil.historico as HistoricoRow[];
+
+  if (!produtos.length) {
     return NextResponse.json({ faturamentoBruto: 0, roas: 0, saudeScore: 0 });
   }
 
   try {
     const inicio = inicioStr ? parseISO(inicioStr) : undefined;
     const fim = fimStr ? parseISO(fimStr) : undefined;
-    const codigosProduto = funil.produtos.map((p: Produto) => p.codigoHotmart);
+    const codigosProduto = produtos.map((p) => p.codigoHotmart);
 
     const vendas = await getVendas({ dataInicio: inicio, dataFim: fim, codigosProduto });
 
     const currentMes = format(new Date(), "yyyy-MM");
-    const gastoManualDoMes = funil.gastoManual.find((g: GastoManual) => g.mes === currentMes);
+    const gastoManualDoMes = gastoManual.find((g) => g.mes === currentMes);
 
     const fbData = {
       gasto: gastoManualDoMes?.valor || 0,
@@ -50,12 +81,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       ctr: 0,
     };
 
-    const metricas = calcularMetricas(vendas, funil.produtos as Produto[], fbData);
-    const saude = calcularSaude(metricas, funil.historico as HistoricoItem[], funil.produtos[0]?.metaMensal || 0);
+    const metricas = calcularMetricas(vendas, produtos, fbData);
+    const saude = calcularSaude(metricas, historico, produtos[0]?.metaMensal || 0);
 
     return NextResponse.json({ ...metricas, saudeScore: saude.score });
   } catch {
-    // Return zeros if sheets not configured
     return NextResponse.json({ faturamentoBruto: 0, roas: 0, saudeScore: 0 });
   }
 }
