@@ -29,8 +29,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
+RUN mkdir -p ./public
 
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
