@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getVendas } from "@/lib/google-sheets";
+import { getVendas } from "@/lib/hotmart";
 import { getMetricas } from "@/lib/facebook-api";
 import Anthropic from "@anthropic-ai/sdk";
 import { startOfDay, endOfDay, subDays, format } from "date-fns";

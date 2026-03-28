@@ -1,4 +1,4 @@
-import { VendaRow } from "./google-sheets";
+import { VendaRow } from "./hotmart";
 
 export interface ProdutoMetrica {
   codigoHotmart: string;

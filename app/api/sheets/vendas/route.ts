@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getVendas } from "@/lib/google-sheets";
+import { getVendas } from "@/lib/hotmart";
 import { parseISO } from "date-fns";
 
 export async function GET(req: NextRequest) {
