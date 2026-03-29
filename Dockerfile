@@ -38,8 +38,8 @@ RUN mkdir -p /app/data && chown nextjs:nodejs /app/data && chown nextjs:nodejs /
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy node_modules for prisma migrate at runtime
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Copy node_modules from builder (includes generated Prisma Client from prisma generate)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 
