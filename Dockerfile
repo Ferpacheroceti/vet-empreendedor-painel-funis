@@ -6,7 +6,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci && npm install --no-save @libsql/linux-x64-musl
 
 # Rebuild the source code only when needed
 FROM base AS builder
