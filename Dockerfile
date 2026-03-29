@@ -26,22 +26,18 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN groupadd --system --gid 1001 nodejs
-RUN useradd --system --uid 1001 nextjs
+RUN mkdir -p ./public
+RUN mkdir -p /app/data
 
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/scripts ./scripts
-RUN mkdir -p ./public
 
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data && chown nextjs:nodejs /app/scripts
-
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 # Copy node_modules from builder (includes generated Prisma Client from prisma generate)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-
-USER nextjs
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
