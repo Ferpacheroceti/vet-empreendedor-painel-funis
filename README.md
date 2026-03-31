@@ -65,7 +65,7 @@ Acesse: http://localhost:3000
 
 ```env
 GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"..."}
-GOOGLE_SPREADSHEET_ID=1J2bfYxxz-XoG0EaFBHZ5L6GTH2fHJ8RBeCckzmB6-8w
+GOOGLE_SPREADSHEET_ID=seu_spreadsheet_id
 GOOGLE_SHEET_NAME=Report
 ```
 
